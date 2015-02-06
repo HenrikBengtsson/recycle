@@ -34,11 +34,3 @@ SEXP recycle_by_name(SEXP name_, SEXP rho) {
 
   return var;
 }
-
-
-SEXP string() {
-  SEXP var = mkChar("Hello world!");
-  Rprintf("NAMED: %d\n", NAMED(var));
-  SET_NAMED(var, 0);
-  return var;
-}

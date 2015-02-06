@@ -22,12 +22,3 @@ recycle <- function(var) {
 recycle_by_name <- function(name) {
   .Call("recycle_by_name", as.character(name), parent.frame(), PACKAGE="recycle")
 }
-
-yank <- function(var) {
-  name <- substitute(var)
-  .Call("yank", as.character(name), parent.frame(), PACKAGE="recycle")
-}
-
-yank_by_name <- function(name) {
-  .Call("yank_by_name", as.character(name), parent.frame(), PACKAGE="recycle")
-}

@@ -27,13 +27,3 @@ SEXP named(SEXP name_, SEXP rho) {
 
   return ans;
 }
-
-void set_named(SEXP name_, SEXP named_, SEXP rho) {
-  SEXP var;
-  const char *name;
-
-  name = CHAR(asChar(name_));
-  var = findVar(install(name), rho);
-  SET_NAMED(var, asInteger(named_));
-}
-
