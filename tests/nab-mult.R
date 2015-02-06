@@ -13,9 +13,10 @@ wx <- function(X, W, nabbed=FALSE) {
   if (nabbed) {
     stopifnot(!exists("W", envir=parent.frame(), inherits=TRUE))
     ## FIXME: Above 'Y' gets NAMED=2, not NAMED=1.
-##    stopifnot(named(Y) < 2)
+    ## Is this because how R internally passes arguments?
     nabbed <- (named(Y) < 2)
     if (!nabbed) warning("Nabbing failed")
+##    stopifnot(named(Y) < 2)
   } else {
     stopifnot(named(Y) == 2)
   }
