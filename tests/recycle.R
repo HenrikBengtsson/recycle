@@ -1,6 +1,5 @@
 library("recycle")
 
-
 local({
   message("TEST #1: Will not be able to recycle")
 

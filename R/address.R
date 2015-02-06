@@ -9,12 +9,12 @@ address <- function(var) {
   name <- substitute(var)
   expr <- substitute(.Internal(inspect(name)), list(name=name))
 
+  info <- NULL; rm(list="info", inherits=FALSE) # To PLEASE CMD check
   con <- textConnection("info", open="w")
   on.exit(close(con))
   sink(con)
   eval(expr, envir=parent.frame())
   sink()
 
-  info <- gsub("@", "", gsub(" .*", "", info))
-  info
+  gsub("@", "", gsub(" .*", "", info[1]))
 }
