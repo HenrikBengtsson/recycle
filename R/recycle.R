@@ -18,12 +18,12 @@
 #' @useDynLib recycle
 nab <- function(var) {
   name <- substitute(var)
-  rm(list="var", inherits=TRUE)
+  .Call("recycle_by_name", as.character(name), parent.frame(), PACKAGE="recycle")
+}
+
+nab_by_name <- function(name) {
   .Call("recycle_by_name", as.character(name), parent.frame(), PACKAGE="recycle")
 }
 
 recycle <- nab
-
-recycle_by_name <- function(name) {
-  .Call("recycle_by_name", as.character(name), parent.frame(), PACKAGE="recycle")
-}
+recycle_by_name <- nab_by_name

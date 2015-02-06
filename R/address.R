@@ -16,5 +16,6 @@ address <- function(var) {
   eval(expr, envir=parent.frame())
   sink()
 
+  info <- grep("@", info, value=TRUE)
   gsub("@", "", gsub(" .*", "", info[1]))
 }
