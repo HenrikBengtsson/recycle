@@ -1,0 +1,11 @@
+Package: recycle
+Version: 0.1.0
+Depends: R (>= 3.1.2)
+Title: R Object Recycler
+Authors@R: c(person("Henrik", "Bengtsson", role=c("aut", "cre", "cph"),
+                                          email = "henrikb@braju.com"))
+Description: Avoid duplicating objects in R by recycling them.
+License: LGPL (>= 2.1)
+URL: https://github.com/HenrikBengtsson/recycle
+BugReports: https://github.com/HenrikBengtsson/recycle/issues
+LazyLoad: TRUE
