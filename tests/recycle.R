@@ -49,7 +49,6 @@ local({
   ## Remove 'x' but try to recycle it's value into 'z'
   ## (the recycling will not succeed because the value
   ##  that 'x' referred to already had too many reference)
-  stopifnot(named(z) == 0) ## Non-existent
   z <- recycle:::recycle_by_name("x")
   stopifnot(named(z) == 1) ## Recycled!
   stopifnot(!exists("x", inherits=FALSE))  # 'x' was removed
