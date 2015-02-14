@@ -8,16 +8,19 @@
 #' This functions uses \code{methods:::.BasicFunsList}.
 #'
 #' @export
-list_primitives <- function(names=FALSE) {
+list_primitives <- function(names=TRUE) {
   ns <- getNamespace("methods")
   .BasicFunsList <- get(".BasicFunsList", mode="list", envir=ns)
-  vars <- names(.BasicFunsList)
 
-  if (!names) {
+  if (names) {
+    vars <- names(.BasicFunsList)
+    vars <- sort(vars)
+  } else {
     envir <- baseenv()
-    vars <- lapply(vars, FUN=function(name) {
+    vars <- lapply(names(.BasicFunsList), FUN=function(name) {
       get(name, mode="function", envir=envir)
     })
+    names(vars) <- names(.BasicFunsList)
   }
 
   vars
