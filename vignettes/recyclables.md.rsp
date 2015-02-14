@@ -65,6 +65,9 @@ _Remark:_ That initial and cumbersome way of creating variable `x` is just to ma
 
 
 ## Limitations
+
+**UPDATE 2015-02-14: It might be that the below extra copies is an artifact of `R.utils::withCapture()` use by this vignette.  Needs to be investigated, because all this may work in the end of the day.**
+
 All variables returned by functions have their "named" status set to 2, cf. above examples.  This means that `r()` only works for the first round of function calls, as illustrated in this example:
 ```r
 <%=withCapture({
