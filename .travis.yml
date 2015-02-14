@@ -45,6 +45,7 @@ before_install:
     fi
 
 install:
+  - $RENV install_r R.utils R.rsp 
 #  - $RENV install_deps
 
 script:

@@ -64,6 +64,40 @@ which causes a copy being created in the call to `sqrt()`.
 _Remark:_ That initial and cumbersome way of creating variable `x` is just to make it "unreferenced", i.e. `named(x) == 1`.  It is only variables with `named(x) < 2` that can be recycled.  A variable that cannot be recycled, will be copied.  For more information about the 'named' (aka 'NAMED') property, please see the 'R Internals' document.
 
 
+## Limitations
+All variables returned by functions have their "named" status set to 2, cf. above examples.  This means that `r()` only works for the first round of function calls, as illustrated in this example:
+```r
+<%=withCapture({
+x <- runif(1e6); x[1] <- x[1]
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+x <- sqrt(r(x))
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+x <- sqrt(r(x))
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+})%>
+```
+
+This also points to another limitation with `r()`; in order to pass a variable `x` with `named(x) < 2`, you have to create a copy first, as seen here:
+```r
+<%=withCapture({
+x <- runif(1e6)
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+x[1] <- x[1]
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+})%>
+```
+Note how the second assignment is actually creating a copy.  This is why we get `named(x) == 1` in the first place.  This is an unfortunate show stopper for the `recycle` package really being useful in real applications.  However, the above creating of the initial `x` can be improved such that it creates a small initial value;
+```r
+<%=withCapture({
+x <- 0
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+x[] <- runif(1e6)
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+})%>
+```
+_Remark_: I am actually not sure whether this approach avoids an extra copy or not; it could be that internally it first expands the original `x` and the copies it before applying `x[] <- ...`.
+
+
 ## Example of functions that can recycle variables
 
 <%
