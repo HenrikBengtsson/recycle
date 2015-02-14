@@ -12,13 +12,16 @@
 #' print(ay <- address(y))
 #' stopifnot(ay == ax)
 #'
+#' @aliases r
 #' @export
-#' @export recycle
+#' @export r
 #' @useDynLib recycle
 recycle <- function(var) {
   name <- substitute(var)
   .Call("recycle_by_name", as.character(name), parent.frame(), PACKAGE="recycle")
 }
+
+r <- recycle
 
 recycle_by_name <- function(name) {
   .Call("recycle_by_name", as.character(name), parent.frame(), PACKAGE="recycle")
