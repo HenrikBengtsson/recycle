@@ -18,12 +18,12 @@ foo <- function() {
 foo()
 print(gc())
 
-message("TEST #1: sqrt() with nab internally")
+message("TEST #1: sqrt() with recycle internally")
 foo <- function() {
   x <- runif(n)
   message("named(x): ", named(x))
   message("address(x): ", ax <- address(x))
-  y <- sqrt(nab(x))
+  y <- sqrt(recycle(x))
   message("named(y): ", named(y))
   message("address(y): ", ay <- address(y), " == address(x)")
   stopifnot(ay == ax)
@@ -46,12 +46,12 @@ local({
 })
 print(gc())
 
-message("TEST #2: sqrt() with nab locally")
+message("TEST #2: sqrt() with recycle locally")
 local({
   x <- runif(n)
   message("named(x): ", named(x))
   message("address(x): ", ax <- address(x))
-  y <- sqrt(nab(x))
+  y <- sqrt(recycle(x))
   message("named(y): ", named(x))
   message("address(y): ", ay <- address(y), " == address(x)")
   stopifnot(ay == ax)
@@ -74,7 +74,7 @@ x <- runif(n)
 foo(x)
 print(gc())
 
-message("TEST #3: sqrt() with nab in call")
+message("TEST #3: sqrt() with recycle in call")
 foo <- function(x) {
   message("named(x): ", named(x))
   message("address(x): ", ax <- address(x))
@@ -85,5 +85,5 @@ foo <- function(x) {
   ## stopifnot(ay == ax)
 }
 x <- runif(n)
-foo(nab(x))
+foo(recycle(x))
 print(gc())

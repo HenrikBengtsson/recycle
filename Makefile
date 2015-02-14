@@ -256,14 +256,8 @@ binary: $(R_OUTDIR)/$(PKG_ZIP)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Build Rd help files from Rdoc comments
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Rd: check_Rex
-	$(R_SCRIPT) -e "setwd('..'); Sys.setlocale(locale='C'); R.oo::compileRdoc('$(PKG_NAME)', path='$(PKG_DIR)')"
-
-%.Rd:
-	$(R_SCRIPT) -e "setwd('..'); Sys.setlocale(locale='C'); R.oo::compileRdoc('$(PKG_NAME)', path='$(PKG_DIR)', '$*.R')"
-
-missing_Rd:
-	$(R_SCRIPT) -e "x <- readLines('$(R_CHECK_OUTDIR)/00check.log'); from <- grep('Undocumented code objects:', x)+1; if (length(from) > 0L) { to <- grep('All user-level objects', x)-1; x <- x[from:to]; x <- gsub('^[ ]*', '', x); x <- gsub('[\']', '', x); cat(x, sep='\n', file='999.missingdocs.txt'); }"
+Rd:
+	$(R_SCRIPT) -e "roxygen2::roxygenize()"
 
 spell_Rd:
 	$(R_SCRIPT) -e "f <- list.files('man', pattern='[.]Rd$$', full.names=TRUE); utils::aspell(f, filter='Rd')"
