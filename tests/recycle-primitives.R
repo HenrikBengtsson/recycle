@@ -1,43 +1,57 @@
 library("recycle")
-library("R.utils")
+
+printf <- function(...) message(sprintf(...), appendLF=FALSE)
+is_primitive <- function(names) {
+  sapply(names, FUN=function(name) {
+    is.primitive(get(name))
+  })
+}
 
 opts <- options(warn=1L)
 
 ## Mathematical primitives taking a numeric vector as input
 ## and returning another vector
-prims <- c("abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "ceiling", "cos", "cosh", "cospi", "cummax", "cummin", "cumprod", "cumsum", "digamma", "exp", "expm1", "floor", "gamma", "log", "log10", "log1p", "log2", "sin", "sinh", "sinpi", "sqrt", "tan", "tanh", "tanpi", "trigamma")
+math_prims <- c("abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "ceiling", "cos", "cosh", "cospi", "cummax", "cummin", "cumprod", "cumsum", "digamma", "exp", "expm1", "floor", "gamma", "log", "log10", "log1p", "log2", "sin", "sinh", "sinpi", "sqrt", "tan", "tanh", "tanpi", "trigamma", "xtfrm")
+
+misc_funs <- c("c", "t", "rank", "sort", "order", "Im", "Re", "Arg", "Mod", "Conj")
+
+funs <- c(math_prims, misc_funs)
+funs <- sort(funs)
 
 ## Record which functions copies and which can recycle
-data <- data.frame(name=prims, copies=FALSE, recycable=FALSE)
+data <- data.frame(name=I(funs), recycable=FALSE, copies=FALSE, primitive=is_primitive(funs))
 
-for (kk in seq_along(prims)) {
-  prim <- prims[[kk]]
-  mprintf("Primitive function #%d ('%s'):\n", kk, prim)
-  fun <- get(prim, mode="function")
+for (kk in seq_len(nrow(data))) {
+  name <- data$name[[kk]]
+  printf("Function #%d ('%s'):\n", kk, name)
+  fun <- get(name, mode="function")
 
   x <- 0; x[1] <- 1.0
-  mprintf(" named(x): %s\n", named(x))
-  mprintf(" address(x): %s\n", ax <- address(x))
+  printf(" named(x): %s\n", named(x))
+  printf(" address(x): %s\n", ax <- address(x))
 
   ## Call without recycling
-  mprintf(" y <- %s(x)\n", prim)
+  printf(" y <- %s(x)\n", name)
   y0 <- fun(x)
-  mstr(y0)
-  mprintf(" named(y0): %s\n", named(y0))
-  mprintf(" address(y0): %s\n", ay0 <- address(y0))
+  str(y0)
+  printf(" named(y0): %s\n", named(y0))
+  printf(" address(y0): %s\n", ay0 <- address(y0))
   data$copies[[kk]] <- !identical(ay0, ax)
 
   ## Call with recycling
-  mprintf(" y <- %s(r(x))\n", prim)
+  printf(" y <- %s(r(x))\n", name)
   y1 <- fun(r(x))
-  mstr(y1)
-  mprintf(" named(y1): %s\n", named(y1))
-  mprintf(" address(y1): %s\n", ay1 <- address(y1))
+  str(y1)
+  printf(" named(y1): %s\n", named(y1))
+  printf(" address(y1): %s\n", ay1 <- address(y1))
   data$recycable[[kk]] <- identical(ay1, ax)
 
   stopifnot(identical(y1, y0))
 }
 
-mprint(data)
+## Summary
+data <- data[order(!data$recycable, data$copies, data$primitive),]
+rownames(data) <- NULL
+print(data)
 
 options(opts)

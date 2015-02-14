@@ -4,7 +4,7 @@
 \alias{list_primitives}
 \title{Lists all primitives in R}
 \usage{
-list_primitives(names = FALSE)
+list_primitives(names = TRUE)
 }
 \arguments{
 \item{names}{If TRUE, names are returned, otherwise functions.}
