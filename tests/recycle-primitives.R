@@ -13,9 +13,9 @@ opts <- options(warn=1L)
 ## and returning another vector
 math_prims <- c("abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "ceiling", "cos", "cosh", "cospi", "cummax", "cummin", "cumprod", "cumsum", "digamma", "exp", "expm1", "floor", "gamma", "log", "log10", "log1p", "log2", "sin", "sinh", "sinpi", "sqrt", "tan", "tanh", "tanpi", "trigamma", "xtfrm")
 
-misc_funs <- c("c", "t", "rank", "sort", "order", "Im", "Re", "Arg", "Mod", "Conj")
+math_misc <- c("c", "t", "rank", "sort", "order", "Im", "Re", "Arg", "Mod", "Conj")
 
-funs <- c(math_prims, misc_funs)
+funs <- c(math_prims, math_misc)
 funs <- sort(funs)
 
 ## Record which functions copies and which can recycle

@@ -1,0 +1,115 @@
+<%@meta language="R-vignette" content="--------------------------------
+DIRECTIVES FOR R:
+%\VignetteIndexEntry{Examples of functions that can recycle objects}
+%\VignetteAuthor{Henrik Bengtsson}
+%\VignetteKeyword{R}
+%\VignetteKeyword{memory}
+%\VignetteKeyword{garbage collection}
+%\VignetteEngine{R.rsp::rsp}
+%\VignetteTangle{TRUE}
+--------------------------------------------------------------------"%>
+<% t0 <- Sys.time() %>
+<%
+options("withCapture/newline"=FALSE)
+options(width=110L)
+options(deparse.cutoff=110L)
+library("R.utils") ## withCapture()
+library("recycle")
+%>
+
+# <%@meta name="title"%>
+
+<%@meta name="author"%> on <%=format(Sys.Date(), format="%B %d, %Y")%>
+
+
+## Introduction
+The `recycle` package and it's core function `recycle()`, or short `r()`, provides means to "recycle" a variable's allocated memory (value) when calling functions.  More specifically, it is possible to tell R to discard the variable while at the same time recycling its value (allocated memory slot) such that it can be reused by the function called.
+
+Recycling variables this way avoids memory allocation and lowers the burden on the garbage collector.
+
+For example, below the final value of variable 'x' will use the same allocated memory slot as the initial value:
+```r
+<%=withCapture({
+library('recycle')
+x <- runif(1e6); x[1] <- x[1]
+x <- sqrt(r(x))
+})%>
+```
+This can be seen if we inspect the actually memory location of each variable;
+```r
+<%=withCapture({
+x <- runif(1e6); x[1] <- x[1]
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+x <- sqrt(r(x))
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+})%>
+```
+
+<% x <- NULL; gc(); %>
+
+
+Without recycling, we could do:
+```r
+<%=withCapture({
+x <- runif(1e6); x[1] <- x[1]
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+x <- sqrt(x)
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+})%>
+```
+which causes a copy being created in the call to `sqrt()`.
+
+
+
+_Remark:_ That initial and cumbersome way of creating variable `x` is just to make it "unreferenced", i.e. `named(x) == 1`.  It is only variables with `named(x) < 2` that can be recycled.  A variable that cannot be recycled, will be copied.  For more information about the 'named' (aka 'NAMED') property, please see the 'R Internals' document.
+
+
+## Example of functions that can recycle variables
+
+<%
+is_primitive <- function(names) {
+  sapply(names, FUN=function(name) {
+    is.primitive(get(name))
+  })
+}
+
+## Mathematical primitives taking a numeric vector as input
+## and returning another vector
+math_prims <- c("abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "ceiling", "cos", "cosh", "cospi", "cummax", "cummin", "cumprod", "cumsum", "digamma", "exp", "expm1", "floor", "gamma", "log", "log10", "log1p", "log2", "sin", "sinh", "sinpi", "sqrt", "tan", "tanh", "tanpi", "trigamma", "xtfrm")
+
+math_misc <- c("c", "t", "rank", "sort", "order", "Im", "Re", "Arg", "Mod", "Conj")
+
+funs <- c(math_prims, math_misc)
+funs <- sort(funs)
+
+## Record which functions copies and which can recycle
+data <- data.frame(name=I(funs), recycable=FALSE, copies=FALSE, primitive=is_primitive(funs))
+
+for (kk in seq_len(nrow(data))) {
+  name <- data$name[[kk]]
+  fun <- get(name, mode="function")
+
+  x <- 0; x[1] <- 1.0
+  ax <- address(x)
+
+  ## Call without recycling
+  y0 <- fun(x)
+  ay0 <- address(y0)
+  data$copies[[kk]] <- !identical(ay0, ax)
+
+  ## Call with recycling
+  y1 <- fun(r(x))
+  ay1 <- address(y1)
+  data$recycable[[kk]] <- identical(ay1, ax)
+
+  stopifnot(identical(y1, y0))
+}
+
+## Summary
+data <- data[order(!data$recycable, data$copies, data$primitive),]
+rownames(data) <- NULL
+%>
+
+```r
+<% print(data) %>
+```
