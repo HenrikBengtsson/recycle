@@ -23,98 +23,130 @@ library("recycle")
 
 
 ## Introduction
-The `recycle` package and it's core function `recycle()`, or short `r()`, provides means to "recycle" a variable's allocated memory (value) when calling functions.  More specifically, it is possible to tell R to discard the variable while at the same time recycling its value (allocated memory slot) such that it can be reused by the function called.
+The `recycle` package and it's core function `recycle()`, or short `r()`, provides means to "recycle" a variable's allocated memory (value) when calling functions.  More specifically, with `recycle` it possible to tell R to _discard the variable while still passing its value as an argument_.
+Recycling variables this way can help _avoid intermediate memory allocations_, which _lowers the overall memory usage_ and _increases the speed_ because the burden on the garbage collector is decreased.
 
-_Recycling variables this way avoids memory allocation and lowers the burden on the garbage collector._
 
-Before starting, I need to make it clear that recycling of variables currently only works out of the box for _local variables_, i.e. variables inside functions and inside `local()` calls.  As shown later, variables in the global environment can only be recycled once, e.g. variables assigned via the R prompt and by `source()`:ing an R script will not be recycable in general.   Because of this, we wrap everything in `local()` below in order to achieve local variables.
+For instance, assume for a moment that R would not provide us with a function for generating random normal values, but only one for uniform numbers in $(0,1)$, i.e. `runif()`.  This is not a unusual scenario in non-scientific computer languages.  Using the [Box-Muller transform] it is possible to generate a normally distributed sample from two uniformly distributed samples.  Let $X_1$ and $X_2$ denote two independent and uniformly distributed random variables in $(0,1)$.  Then
 
-For example, below the final value of variable 'x' will use the same allocated memory slot as the initial value:
-```r
-library('recycle')
-<%=withCapture(local({
-n <- 1e6
-x <- rnorm(n)
-x <- abs(r(x))
-x <- sqrt(r(x))
-x <- log(r(x))
-}))%>
-```
-This can be seen if we inspect the memory location used in each step;
-```r
-<%=withCapture(local({
-n <- 1e6
-x <- rnorm(n)
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-x <- abs(r(x))
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-x <- sqrt(r(x))
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-x <- log(r(x))
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-}))%>
-```
+  $Z = \sqrt{-2 \ln X_1} \cos(2 \pi X_2)$
 
+is a random variable with a _standard normal distribution_.  By an affine tranform we can then obtain a variable with any mean and variance of interest.
+Using this knowledge, we implement the following random generator that samples from the normal distribution only with the help of `runif()`:
 ```r
 <%=withCapture({
-log_sqrt_abs_runif <- function(n) {
-  x <- rnorm(n)
-  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-  x <- abs(r(x))
-  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-  x <- sqrt(r(x))
-  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-  x <- log(r(x))
-  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+rnorm2 <- function(n, mean = 0, sd = 1) {
+  x1 <- runif(n)
+  x1 <- log(x1)
+  x1 <- -2.0 * x1
+  x1 <- sqrt(x1)
+  
+  x2 <- runif(n)
+  x2 <- 2*pi * x2
+  x2 <- sin(x2)
+  
+  x <- x1 * x2
+  x <- mean + sd * x
   x
 }
-x <- sqrt_abs()
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+})%>
+```
+(In the above code, each step is calculated in a separate line of code in order to make it clear below in what steps copies are created.)
+Random normal values can now be generated as:
+```r
+<%=withCapture({
+x <- rnorm2(1e6)
+str(x)
 })%>
 ```
 
+If we look at the memory address and the 'named' status of the variables after each step, we find that several internal copies are created:
+<%
+rnorm2 <- function(n, mean = 0, sd = 1) {
+  cat('rnorm2():\n')
+  
+  x1 <- runif(n)
+  cat(sprintf('  x1 <- runif(n) : address(x1)=%s, named(x1)=%d\n', address(x1), named(x1)))
+  x1 <- log(x1)
+  cat(sprintf('  x1 <- log(x1)  : address(x1)=%s, named(x1)=%d\n', address(x1), named(x1)))
+  x1 <- -2 * x1
+  cat(sprintf('  x1 <- -2*x1    : address(x1)=%s, named(x1)=%d\n', address(x1), named(x1)))
+  x1 <- sqrt(x1)
+  cat(sprintf('  x1 <- sqrt(x1) : address(x1)=%s, named(x1)=%d\n', address(x1), named(x1)))
+  
+  x2 <- runif(n)
+  cat(sprintf('  x2 <- runif(n) : address(x2)=%s, named(x2)=%d\n', address(x2), named(x2)))
+  x2 <- 2*pi * x2
+  cat(sprintf('  x2 <- 2*pi*x2  : address(x2)=%s, named(x2)=%d\n', address(x2), named(x2)))
+  x2 <- sin(x2)
+  cat(sprintf('  x2 <- sin(x2)  : address(x2)=%s, named(x2)=%d\n', address(x2), named(x2)))
+  
+  x <- x1 * x2
+  cat(sprintf('  x <- x1*x2     : address( x)=%s, named( x)=%d\n', address(x), named(x)))
+  x <- mean + sd * x
+  cat(sprintf('  x <- mean+sd*x : address( x)=%s, named( x)=%d\n', address(x), named(x)))
 
-```r
-<%=withCapture(local({
-sqrt_abs <- function(x) {
-  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-  str(x)
-  x <- abs(r(x))
-  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-  x <- sqrt(r(x))
-  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
   x
 }
-x <- runif(1e6)
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-x <- sqrt_abs(x)
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-}))%>
-```
+%>
 
-<% x <- NULL; gc(); %>
-
-
-Without recycling, we could do:
 ```r
-<%=withCapture(local({
-x <- runif(1e6)
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-x <- abs(x)
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-x <- sqrt(x)
-cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
-}))%>
+<%=withCapture({
+y <- rnorm2(1e6)
+cat(sprintf('address(y)=%s, named(y)=%d\n', address(y), named(y)))
+str(y)
+})%>
 ```
-which causes a copy being created in each function call.  Note however that R happens to reuse the same memory slots in between calls.
+Note how nine (9) objects(\*) are created throughout the function, with the last one being returned and allocated to `y`.  (\*) It is not clear to me whether the fact that some variables end up with the same memory addresses as already-discarded variables once had avoids some garbage collection or not.  I would appreaciate feedback on this.
 
 
-_Remark:_ That initial and cumbersome way of creating variable `x` is just to make it "unreferenced", i.e. `named(x) == 1`.  It is only variables with `named(x) < 2` that can be recycled.  A variable that cannot be recycled, will be copied.  For more information about the 'named' (aka 'NAMED') property, please see the 'R Internals' document.
+Next we will use `r(x)` when passing values to functions.  Conceptually the `r(x)` construct does `rm(x)` exactly in the same moment as the value is passed to the function.  If no other objects has been referring to the value that `x` refers to, then `named(x) == 1` and therefore `r(x)` will conclude that the _value_ can be _recycled_ and passed with `named(x) == 0` to the function as an ("unnamed") argument.
+
+So, by using `r(x1)`, `r(x2)` and `r(x)` whenever the "previous" values of `x1`, `x2` and `x` are no longer needed, we can avoid several of the intermediate copies:
+<%
+rnorm2_r <- function(n, mean = 0, sd = 1) {
+  cat('rnorm2_r():\n')
+  
+  x1 <- runif(n)
+  cat(sprintf('  x1 <- runif(n)    : address(x1)=%s, named(x1)=%d\n', address(x1), named(x1)))
+  x1 <- log(r(x1))
+  cat(sprintf('  x1 <- log(r(x1))  : address(x1)=%s, named(x1)=%d\n', address(x1), named(x1)))
+  x1 <- -2 * r(x1)
+  cat(sprintf('  x1 <- -2*r(x1)    : address(x1)=%s, named(x1)=%d\n', address(x1), named(x1)))
+  x1 <- sqrt(r(x1))
+  cat(sprintf('  x1 <- sqrt(r(x1)) : address(x1)=%s, named(x1)=%d\n', address(x1), named(x1)))
+  
+  x2 <- runif(n)
+  cat(sprintf('  x2 <- runif(n)    : address(x2)=%s, named(x2)=%d\n', address(x2), named(x2)))
+  x2 <- 2*pi * r(x2)
+  cat(sprintf('  x2 <- 2*pi*r(x2)  : address(x2)=%s, named(x2)=%d\n', address(x2), named(x2)))
+  x2 <- sin(r(x2))
+  cat(sprintf('  x2 <- sin(r(x2))  : address(x2)=%s, named(x2)=%d\n', address(x2), named(x2)))
+  
+  x <- r(x1) * r(x2)
+  cat(sprintf('  x <- r(x1)*r(x2)  : address( x)=%s, named( x)=%d\n', address(x), named(x)))
+  x <- mean + sd * r(x)
+  cat(sprintf('  x <- mean+sd*r(x) : address( x)=%s, named( x)=%d\n', address(x), named(x)))
+
+  r(x)
+}
+%>
+
+```r
+<%=withCapture({
+y <- rnorm2_r(1e6)
+cat(sprintf('address(y)=%s, named(y)=%d\n', address(y), named(y)))
+str(y)
+})%>
+```
+Note how only two (2) objects are created, with the last one being returned and allocated to `y`.   The reason why this also works for, say, multications, is that a multiplication `z <- x * y` in R is the same as function call `` z <- `*`(x, y) ``.
 
 
 ## Limitations
 
-Recycling only works for _local variables_.  If used for global variables in the global environment, it is only the first round of recycling that will succeed in recycling the value/memory slot.  Here is an example:
+### Only local variables can be recycled
+
+Recycling only works for _local variables_, i.e. variables inside functions and variables inside `local()` calls.  If used for variables in the global environment, it is only the first round of recycling that will succeed in reusing the value/memory slot, which is because the 'named' state becomes 2 instead of 1 (why this is do not understand).  Here is an example:
 ```r
 <%=withCapture({
 x <- runif(1e6); x[1] <- x[1]
@@ -125,9 +157,24 @@ x <- sqrt(r(x))
 cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 })%>
 ```
+In other words, in order to recycle variables that are entered via the R prompt, or evaluated by `source()`:ing an R script, they have to be wrapped up in a `local()` statement.   For example,
+```r
+<%=withCapture(local({
+x <- runif(1e6); x[1] <- x[1]
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+x <- abs(r(x))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+x <- sqrt(r(x))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+}))%>
+```
+
+_Remark:_ That initial and cumbersome way of creating variable `x` in two steps is just to make it "unreferenced".  The two steps does indeed create an auxillary copy, but we only use this trick to obtain `named(x) == 1` for our examples.  It is only variables with `named(x) < 2` that can be recycled.  A variable that cannot be recycled, will be copied.  For more information about the 'named' (aka 'NAMED') property, please see the 'R Internals' document.
 
 
-## Example of functions that can recycle variables
+### Only "primitive" functions are receptive to recycled variables
+
+### Example of functions that can recycle variables
 
 <%
 is_primitive <- function(names) {
@@ -176,3 +223,5 @@ rownames(data) <- NULL
 ```r
 <% print(data) %>
 ```
+
+[Box-Muller transform]: http://en.wikipedia.org/wiki/Box%-Muller_transform
