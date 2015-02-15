@@ -22,7 +22,3 @@ recycle <- function(var) {
 }
 
 r <- recycle
-
-recycle_by_name <- function(name) {
-  .Call("recycle_by_name", as.character(name), parent.frame(), PACKAGE="recycle")
-}
