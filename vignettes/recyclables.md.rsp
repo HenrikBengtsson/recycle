@@ -33,20 +33,62 @@ For example, below the final value of variable 'x' will use the same allocated m
 ```r
 library('recycle')
 <%=withCapture(local({
-x <- rnorm(1e6)
+n <- 1e6
+x <- rnorm(n)
 x <- abs(r(x))
 x <- sqrt(r(x))
+x <- log(r(x))
 }))%>
 ```
 This can be seen if we inspect the memory location used in each step;
 ```r
 <%=withCapture(local({
-x <- runif(1e6)
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+n <- 1e6
+x <- rnorm(n)
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 x <- abs(r(x))
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 x <- sqrt(r(x))
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+x <- log(r(x))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+}))%>
+```
+
+```r
+<%=withCapture({
+log_sqrt_abs_runif <- function(n) {
+  x <- rnorm(n)
+  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+  x <- abs(r(x))
+  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+  x <- sqrt(r(x))
+  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+  x <- log(r(x))
+  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+  x
+}
+x <- sqrt_abs()
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+})%>
+```
+
+
+```r
+<%=withCapture(local({
+sqrt_abs <- function(x) {
+  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+  str(x)
+  x <- abs(r(x))
+  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+  x <- sqrt(r(x))
+  cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+  x
+}
+x <- runif(1e6)
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
+x <- sqrt_abs(x)
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 }))%>
 ```
 
@@ -57,11 +99,11 @@ Without recycling, we could do:
 ```r
 <%=withCapture(local({
 x <- runif(1e6)
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 x <- abs(x)
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 x <- sqrt(x)
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 }))%>
 ```
 which causes a copy being created in each function call.  Note however that R happens to reuse the same memory slots in between calls.
@@ -76,11 +118,11 @@ Recycling only works for _local variables_.  If used for global variables in the
 ```r
 <%=withCapture({
 x <- runif(1e6); x[1] <- x[1]
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 x <- abs(r(x))
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 x <- sqrt(r(x))
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+cat(sprintf('address(x)=%s, named(x)=%d\n', address(x), named(x)))
 })%>
 ```
 
