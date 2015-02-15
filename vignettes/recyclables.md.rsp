@@ -25,24 +25,29 @@ library("recycle")
 ## Introduction
 The `recycle` package and it's core function `recycle()`, or short `r()`, provides means to "recycle" a variable's allocated memory (value) when calling functions.  More specifically, it is possible to tell R to discard the variable while at the same time recycling its value (allocated memory slot) such that it can be reused by the function called.
 
-Recycling variables this way avoids memory allocation and lowers the burden on the garbage collector.
+_Recycling variables this way avoids memory allocation and lowers the burden on the garbage collector._
+
+Before starting, I need to make it clear that recycling of variables currently only works out of the box for _local variables_, i.e. variables inside functions and inside `local()` calls.  As shown later, variables in the global environment can only be recycled once, e.g. variables assigned via the R prompt and by `source()`:ing an R script will not be recycable in general.   Because of this, we wrap everything in `local()` below in order to achieve local variables.
 
 For example, below the final value of variable 'x' will use the same allocated memory slot as the initial value:
 ```r
-<%=withCapture({
 library('recycle')
-x <- runif(1e6); x[1] <- x[1]
+<%=withCapture(local({
+x <- rnorm(1e6)
+x <- abs(r(x))
 x <- sqrt(r(x))
-})%>
+}))%>
 ```
-This can be seen if we inspect the actually memory location of each variable;
+This can be seen if we inspect the memory location used in each step;
 ```r
-<%=withCapture({
-x <- runif(1e6); x[1] <- x[1]
+<%=withCapture(local({
+x <- runif(1e6)
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+x <- abs(r(x))
 cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
 x <- sqrt(r(x))
 cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
-})%>
+}))%>
 ```
 
 <% x <- NULL; gc(); %>
@@ -50,15 +55,16 @@ cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
 
 Without recycling, we could do:
 ```r
-<%=withCapture({
-x <- runif(1e6); x[1] <- x[1]
+<%=withCapture(local({
+x <- runif(1e6)
+cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
+x <- abs(x)
 cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
 x <- sqrt(x)
 cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
-})%>
+}))%>
 ```
-which causes a copy being created in the call to `sqrt()`.
-
+which causes a copy being created in each function call.  Note however that R happens to reuse the same memory slots in between calls.
 
 
 _Remark:_ That initial and cumbersome way of creating variable `x` is just to make it "unreferenced", i.e. `named(x) == 1`.  It is only variables with `named(x) < 2` that can be recycled.  A variable that cannot be recycled, will be copied.  For more information about the 'named' (aka 'NAMED') property, please see the 'R Internals' document.
@@ -66,39 +72,17 @@ _Remark:_ That initial and cumbersome way of creating variable `x` is just to ma
 
 ## Limitations
 
-**UPDATE 2015-02-14: It might be that the below extra copies is an artifact of `R.utils::withCapture()` use by this vignette.  Needs to be investigated, because all this may work in the end of the day.**
-
-All variables returned by functions have their "named" status set to 2, cf. above examples.  This means that `r()` only works for the first round of function calls, as illustrated in this example:
+Recycling only works for _local variables_.  If used for global variables in the global environment, it is only the first round of recycling that will succeed in recycling the value/memory slot.  Here is an example:
 ```r
 <%=withCapture({
 x <- runif(1e6); x[1] <- x[1]
 cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
-x <- sqrt(r(x))
+x <- abs(r(x))
 cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
 x <- sqrt(r(x))
 cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
 })%>
 ```
-
-This also points to another limitation with `r()`; in order to pass a variable `x` with `named(x) < 2`, you have to create a copy first, as seen here:
-```r
-<%=withCapture({
-x <- runif(1e6)
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
-x[1] <- x[1]
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
-})%>
-```
-Note how the second assignment is actually creating a copy.  This is why we get `named(x) == 1` in the first place.  This is an unfortunate show stopper for the `recycle` package really being useful in real applications.  However, the above creating of the initial `x` can be improved such that it creates a small initial value;
-```r
-<%=withCapture({
-x <- 0
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
-x[] <- runif(1e6)
-cat(sprintf('address(x)=%s, names(x)=%d\n', address(x), named(x)))
-})%>
-```
-_Remark_: I am actually not sure whether this approach avoids an extra copy or not; it could be that internally it first expands the original `x` and the copies it before applying `x[] <- ...`.
 
 
 ## Example of functions that can recycle variables
