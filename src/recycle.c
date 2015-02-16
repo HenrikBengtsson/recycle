@@ -8,7 +8,8 @@ SEXP recycle_by_name(SEXP name_, SEXP rho) {
   int named;
 
   name = CHAR(asChar(name_));
-  var = findVar(install(name), rho);
+
+  var = PROTECT(findVar(install(name), rho));
   named = NAMED(var);
 
   /* Remove the variable used to reference the object */
@@ -18,6 +19,7 @@ SEXP recycle_by_name(SEXP name_, SEXP rho) {
   if (named == 1) SET_NAMED(var, 0);
 
   /*  Rprintf("NAMED(%s)=%d\n", name, NAMED(var)); */
+  UNPROTECT(1);
 
   return var;
 }
