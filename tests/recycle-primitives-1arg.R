@@ -9,11 +9,14 @@ is_primitive <- function(names) {
 
 opts <- options(warn=1L)
 
-## Mathematical primitives taking a numeric vector as input
-## and returning another vector
+
+##################################################################
+## Mathematical primitives that takes:
+## * one numeric vector as input
+##################################################################
 math_prims <- c("abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "ceiling", "cos", "cosh", "cospi", "cummax", "cummin", "cumprod", "cumsum", "digamma", "exp", "expm1", "floor", "gamma", "log", "log10", "log1p", "log2", "sin", "sinh", "sinpi", "sqrt", "tan", "tanh", "tanpi", "trigamma", "xtfrm")
 
-math_misc <- c("c", "t", "rank", "sort", "order", "Im", "Re", "Arg", "Mod", "Conj")
+math_misc <- c("c", "t", "rank", "sort", "order", "Im", "Re", "Arg", "Mod", "Conj", "!")
 
 funs <- c(math_prims, math_misc)
 funs <- sort(funs)
@@ -53,5 +56,6 @@ for (kk in seq_len(nrow(data))) {
 data <- data[order(!data$recycable, data$copies, data$primitive),]
 rownames(data) <- NULL
 print(data)
+
 
 options(opts)
