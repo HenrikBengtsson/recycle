@@ -176,52 +176,10 @@ _Remark:_ That initial and cumbersome way of creating variable `x` in two steps 
 
 ### Example of functions that can recycle variables
 
-<%
-is_primitive <- function(names) {
-  sapply(names, FUN=function(name) {
-    is.primitive(get(name))
-  })
-}
-
-## Mathematical primitives taking a numeric vector as input
-## and returning another vector
-math_prims <- c("abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "ceiling", "cos", "cosh", "cospi", "cummax", "cummin", "cumprod", "cumsum", "digamma", "exp", "expm1", "floor", "gamma", "log", "log10", "log1p", "log2", "sin", "sinh", "sinpi", "sqrt", "tan", "tanh", "tanpi", "trigamma", "xtfrm")
-
-math_misc <- c("c", "t", "rank", "sort", "order", "Im", "Re", "Arg", "Mod", "Conj")
-
-funs <- c(math_prims, math_misc)
-funs <- sort(funs)
-
-## Record which functions copies and which can recycle
-data <- data.frame(name=I(funs), recycable=FALSE, copies=FALSE, primitive=is_primitive(funs))
-
-for (kk in seq_len(nrow(data))) {
-  name <- data$name[[kk]]
-  fun <- get(name, mode="function")
-
-  x <- 0; x[1] <- 1.0
-  ax <- address(x)
-
-  ## Call without recycling
-  y0 <- fun(x)
-  ay0 <- address(y0)
-  data$copies[[kk]] <- !identical(ay0, ax)
-
-  ## Call with recycling
-  y1 <- fun(r(x))
-  ay1 <- address(y1)
-  data$recycable[[kk]] <- identical(ay1, ax)
-
-  stopifnot(identical(y1, y0))
-}
-
-## Summary
-data <- data[order(!data$recycable, data$copies, data$primitive),]
-rownames(data) <- NULL
-%>
-
 ```r
-<% print(data) %>
+<%=withCapture({
+recyclables()
+})%>
 ```
 
 [Box-Muller transform]: http://en.wikipedia.org/wiki/Box%-Muller_transform
