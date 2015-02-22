@@ -23,15 +23,19 @@ library("recycle")
 
 
 ## Introduction
-The `recycle` package and it's core function `recycle()`, or short `r()`, provides means to "recycle" a variable's allocated memory (value) when calling functions.  More specifically, with `recycle` it possible to tell R to _discard the variable while still passing its value as an argument_.
-Recycling variables this way can help _avoid intermediate memory allocations_, which _lowers the overall memory usage_ and _increases the speed_ because the burden on the garbage collector is decreased.
+The `recycle` package and it's core function `recycle()`, or short `r()`, provides means to "recycle" a variable's allocated memory (value) when calling functions.  More specifically, with `recycle` it possible to tell R to _discard the variable while still passing its value as an argument_, e.g.
+```r
+x <- sqrt(r(x))
+```
+Recycling variables this way can help _minimize the amount of allocated memory at a given time_.
 
+Moreover, if the variable removed was the only one that ever had referred to the value (=the object in memory), the internal reference counter for the object is set to zero by `recycle`.  This in turn can be utilized by native-code functions if they are taylored such that they reuse the already allocated space of such non-referenced objects.  If so, the total number of memory allocation can be kept lower as well as the burden on the garbage collector.
 
 For instance, assume for a moment that R would not provide us with a function for generating random normal values, but only one for uniform numbers in $(0,1)$, i.e. `runif()`.  This is not a unusual scenario in non-scientific computer languages.  Using the [Box-Muller transform] it is possible to generate a normally distributed sample from two uniformly distributed samples.  Let $X_1$ and $X_2$ denote two independent and uniformly distributed random variables in $(0,1)$.  Then
 
-  $Z = \sqrt{-2 \ln X_1} \cos(2 \pi X_2)$
+  $Z = \mu + \sigma \cdot \sqrt{-2 \ln X_1} \cos(2 \pi X_2)$
 
-is a random variable with a _standard normal distribution_.  By an affine tranform we can then obtain a variable with any mean and variance of interest.
+is a random variable with a _normal distribution_ with mean $\mu$ and standard deviation $\sigma$.
 Using this knowledge, we implement the following random generator that samples from the normal distribution only with the help of `runif()`:
 ```r
 <%=withCapture({
@@ -97,10 +101,10 @@ cat(sprintf('address(y)=%s, named(y)=%d\n', address(y), named(y)))
 str(y)
 })%>
 ```
-Note how nine (9) objects(\*) are created throughout the function, with the last one being returned and allocated to `y`.  (\*) It is not clear to me whether the fact that some variables end up with the same memory addresses as already-discarded variables once had avoids some garbage collection or not.  I would appreaciate feedback on this.
+Note how nine (9) objects(\*) are created throughout the function, with the last one being returned and allocated to `y`.  (\*) It is not clear to me whether the fact that some variables end up with the same memory addresses as already-discarded variables once had avoids some garbage collection or not.  I would appreciate feedback on this.
 
 
-Next we will use `r(x)` when passing values to functions.  Conceptually the `r(x)` construct does `rm(x)` exactly in the same moment as the value is passed to the function.  If no other objects has been referring to the value that `x` refers to, then `named(x) == 1` and therefore `r(x)` will conclude that the _value_ can be _recycled_ and passed with `named(x) == 0` to the function as an ("unnamed") argument.
+Next we will use `r(x)` when passing values to functions.  Conceptually the `r(x)` construct does `rm(x)` in the exact same moment as the value is passed to the function.  If no other objects has been referring to the value that `x` refers to, then `named(x) == 1` and therefore `r(x)` will conclude that the _value_ can be _recycled_ and passed with `named(x) == 0` to the function as an ("unnamed") argument.
 
 So, by using `r(x1)`, `r(x2)` and `r(x)` whenever the "previous" values of `x1`, `x2` and `x` are no longer needed, we can avoid several of the intermediate copies:
 <%
@@ -141,12 +145,22 @@ str(y)
 ```
 Note how only two (2) objects are created, with the last one being returned and allocated to `y`.   The reason why this also works for, say, multications, is that a multiplication `z <- x * y` in R is the same as function call `` z <- `*`(x, y) ``.
 
+It should be noted that can you can minimize the total reference count used internally but minimizing the number of variables, which can be achieved by writing the function in as few number of expression as possible.  In this case it can be done in one long expression, i.e.
+```r
+<%=withCapture({
+rnorm2_1 <- function(n, mean = 0, sd = 1) {
+  mean + sd * (sqrt(-2.0 * log(runif(n, min=0, max=1))) * sin(runif(n, min=0, max=2*pi)))
+}
+})%>
+```
+
+
 
 ## Limitations
 
 ### Only local variables can be recycled
 
-Recycling only works for _local variables_, i.e. variables inside functions and variables inside `local()` calls.  If used for variables in the global environment, it is only the first round of recycling that will succeed in reusing the value/memory slot, which is because the 'named' state becomes 2 instead of 1 (why this is do not understand).  Here is an example:
+Recycling only works for _local variables_, i.e. variables inside functions and variables inside `local()` calls.  If used for variables in the global environment, it is only the first round of recycling that will succeed in reusing the value/memory slot, which is because the 'named' state becomes 2 instead of 1 (why this is I do not understand).  Here is an example:
 ```r
 <%=withCapture({
 x <- runif(1e6); x[1] <- x[1]

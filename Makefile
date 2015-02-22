@@ -256,8 +256,17 @@ binary: $(R_OUTDIR)/$(PKG_ZIP)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Build Rd help files from Rdoc comments
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Rd:
+rox:
 	$(R_SCRIPT) -e "roxygen2::roxygenize()"
+
+Rd: check_Rex
+	$(R_SCRIPT) -e "setwd('..'); Sys.setlocale(locale='C'); R.oo::compileRdoc('$(PKG_NAME)', path='$(PKG_DIR)')"
+
+%.Rd:
+	$(R_SCRIPT) -e "setwd('..'); Sys.setlocale(locale='C'); R.oo::compileRdoc('$(PKG_NAME)', path='$(PKG_DIR)', '$*.R')"
+
+missing_Rd:
+	$(R_SCRIPT) -e "x <- readLines('$(R_CHECK_OUTDIR)/00check.log'); from <- grep('Undocumented code objects:', x)+1; if (length(from) > 0L) { to <- grep('All user-level objects', x)-1; x <- x[from:to]; x <- gsub('^[ ]*', '', x); x <- gsub('[\']', '', x); cat(x, sep='\n', file='999.missingdocs.txt'); }"
 
 spell_Rd:
 	$(R_SCRIPT) -e "f <- list.files('man', pattern='[.]Rd$$', full.names=TRUE); utils::aspell(f, filter='Rd')"
@@ -281,6 +290,12 @@ $(R_OUTDIR)/vigns: install
 	$(R_SCRIPT) -e "v <- tools::buildVignettes(dir='.'); file.path(getwd(), v[['outputs']])"
 
 vignettes: $(R_OUTDIR)/vigns
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Build package README.md
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+README.md: README.md.rsp
+	$(R_SCRIPT) -e "R.rsp::rfile('README.md.rsp', postprocess=FALSE)"
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -353,3 +368,10 @@ repos: $(REPOS_SRC)/$(PKG_TARBALL)
 
 Makefile: $(FILES_MAKEFILE)
 	$(R_SCRIPT) -e "d <- 'Makefile'; s <- '../../Makefile'; if (file_test('-nt', s, d) && (regexpr('Makefile for R packages', readLines(s, n=1L)) != -1L)) file.copy(s, d, overwrite=TRUE)"
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Refresh
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+refresh_%:
+	$(R_SCRIPT) -e "R.utils::downloadFile('https://raw.githubusercontent.com/HenrikBengtsson/r-package-files/master/templates/$*')"
