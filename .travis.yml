@@ -27,9 +27,8 @@ env:
 
   # R versions r-builder should test on (ignored by r-travis)
   matrix:
-#    - RVERSION=3.0.3
-#    - RVERSION=3.1.2
-#    - RVERSION=devel _R_CHECK_FULL_=FALSE
+    - RVERSION=3.0.3
+    - RVERSION=3.1.2
     - RVERSION=devel _R_CHECK_FULL_=TRUE
 
 
@@ -47,8 +46,8 @@ before_install:
 install:
 
 
- - $RENV install_r R.rsp R.utils
 
+ - $RENV install_r R.rsp R.utils
 
 script:
   - $RENV run_build

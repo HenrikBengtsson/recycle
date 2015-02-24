@@ -107,9 +107,8 @@ env:
 
   # R versions r-builder should test on (ignored by r-travis)
   matrix:
-#    - RVERSION=3.0.3
-#    - RVERSION=3.1.2
-#    - RVERSION=devel _R_CHECK_FULL_=FALSE
+    - RVERSION=3.0.3
+    - RVERSION=3.1.2
     - RVERSION=devel _R_CHECK_FULL_=TRUE
 
 
@@ -125,10 +124,10 @@ before_install:
     fi
 
 install:
-<%= install_cran(c("Depends", "Imports")) %>
 <%= install_bioc(c("Depends", "Imports")) %>
-<%= install_cran("Suggests") %>
 <%= install_bioc("Suggests") %>
+<%= install_cran(c("Depends", "Imports")) %>
+<%= install_cran("Suggests") %>
 
 script:
   - $RENV run_build

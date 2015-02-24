@@ -63,7 +63,7 @@ repos_status <- function() {
 
 travis <- function() {
   if (!file.exists(".travis.yml")) return("")
-  sprintf('<a href="https://travis-ci.org/%s"><img src="https://travis-ci.org/%s.svg?branch=master" alt="Build status"></a>', github_repos(), github_repos())
+  sprintf('<a href="https://travis-ci.org/%s"><img src="https://travis-ci.org/%s.svg" alt="Build status"></a>', github_repos(), github_repos())
 }
 
 appveyor <- function() {
